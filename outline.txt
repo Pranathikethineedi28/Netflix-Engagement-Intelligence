@@ -1,0 +1,48 @@
+1. Raw Data Ingestion
+   users.csv, movies.csv, watch_history.csv, recommendation_logs.csv, search_logs.csv, reviews.csv
+
+2. Data Cleaning
+   missing values, duplicates, date conversion, invalid values
+
+3. Feature Engineering
+   user behavior features, recommendation CTR, search dependency, rating/review signals, genre diversity
+
+4. Feature Store / Master Table
+   one row per user:
+   user_id + all engineered features + target
+
+5. Model Training
+   churn/engagement risk prediction:
+   Logistic Regression, Random Forest, XGBoost
+
+6. Model Evaluation
+   accuracy, precision, recall, F1, ROC-AUC, confusion matrix
+
+7. Model Selection
+   choose best model and save it as model.pkl
+
+8. Model Serving
+   FastAPI endpoint:
+   /predict_user_risk
+
+9. Recommendation / Intervention Layer
+   if high risk → recommend re-engagement content
+   if fatigue → diversify content
+   if high trust → personalized recommendation
+
+10. Explanation Layer
+   explain why user is high/low risk using top features
+
+11. Streamlit UI
+   user enters user_id and sees:
+   risk score, behavior summary, recommendations, explanation
+
+12. Dockerization
+   package API + model + app + dependencies
+
+13. Deployment
+   Render / Streamlit Cloud / Railway
+
+14. Monitoring-ready Design
+   store prediction logs:
+   user_id, prediction, timestamp, model_version
