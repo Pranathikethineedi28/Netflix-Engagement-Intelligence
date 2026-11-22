@@ -47,3 +47,49 @@ streamlit run app.py
 ```
 
 The full analysis is in `notebooks/Netflix_Engagement_Intelligence.ipynb`.
+
+## Production Pipeline: Training, Tracking and Serving
+
+The notebook was turned into a reproducible pipeline in `src/`:
+
+| Piece | What it does |
+|---|---|
+| `src/features.py` | Builds the engagement-risk label and removes the four label-defining columns (target leakage) |
+| `src/train.py` | 80/20 stratified split, 5-fold CV on the training split, model selection by mean CV ROC-AUC, one final score on the held-out test set, then a refit on all users for serving |
+| MLflow tracking | Every run logs parameters, CV metrics (mean and std), test metrics, a hash of the training data and the model itself |
+| `src/api.py` | FastAPI service with `/health`, `/predict` and `/users/{user_id}/risk` |
+| `Dockerfile` | Trains the model during the image build, then serves it with uvicorn as a non-root user |
+| `.github/workflows/ci.yml` | Runs the tests, builds the Docker image and smoke-tests the running container on every push |
+
+### Results (5-fold CV on the training split, then the held-out 20%)
+
+| Model | CV ROC-AUC | CV F1 | Held-out ROC-AUC | Held-out F1 |
+|---|---:|---:|---:|---:|
+| Logistic Regression | 0.864 ± 0.006 | 0.809 ± 0.009 | | |
+| Random Forest (selected) | 0.865 ± 0.005 | 0.820 ± 0.007 | 0.861 | 0.819 |
+
+**A trade-off worth noting:** the Random Forest wins by 0.001 ROC-AUC, well inside one standard deviation, while being far larger (about 48 MB) and harder to explain than Logistic Regression. In production I would likely serve the Logistic Regression; the selection rule is kept simple here so it's easy to audit.
+
+### Run it
+
+```
+pip install -r requirements-api.txt
+
+python -m src.train                                  # train + log to MLflow (sqlite:///mlflow.db)
+mlflow ui --backend-store-uri sqlite:///mlflow.db    # compare runs at http://127.0.0.1:5000
+uvicorn src.api:app --reload                         # API docs at http://127.0.0.1:8000/docs
+pytest -q
+
+docker build -t engagement-risk-api .
+docker run -p 8000:8000 engagement-risk-api
+curl http://localhost:8000/users/user_00001/risk
+```
+
+Example request:
+
+```
+curl -X POST http://localhost:8000/predict -H "Content-Type: application/json" \
+  -d '{"features": {"age": 25, "subscription_plan": "Basic", "total_sessions": 3}}'
+```
+
+Missing features are imputed exactly as in training and listed in the response under `missing_features`. Unknown features, and the label-defining leakage columns, are rejected with HTTP 422.

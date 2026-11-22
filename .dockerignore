@@ -1,0 +1,12 @@
+.git
+.github
+__pycache__/
+.pytest_cache/
+mlflow.db
+mlruns/
+models/
+notebooks/
+assets/
+tests/
+data/*
+!data/user_master_table.csv

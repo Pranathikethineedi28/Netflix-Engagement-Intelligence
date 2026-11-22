@@ -1,1 +1,6 @@
-.ipynb_checkpoints/ 
+.ipynb_checkpoints/
+__pycache__/
+.pytest_cache/
+mlflow.db
+mlruns/
+models/engagement_risk_pipeline.*
